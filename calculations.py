@@ -33,8 +33,33 @@ class FeasibilityResult:
     area_breakdown: dict[str, float]
 
 
+REQUIRED_INPUTS = {
+    "length", "width", "docks", "daily_volume", "peak_factor",
+    "holding_period", "shifts", "handling_unit", "storage_system",
+    "quantity_per_position", "aisle_width", "selected_areas",
+}
+
+
+def _validate_inputs(inputs: dict) -> None:
+    """Raise a helpful error when calculations receive incomplete data."""
+    missing = REQUIRED_INPUTS.difference(inputs)
+    if missing:
+        raise ValueError(f"Missing required inputs: {', '.join(sorted(missing))}")
+    for name in ("length", "width", "docks", "daily_volume", "peak_factor",
+                 "shifts", "quantity_per_position", "aisle_width"):
+        if inputs[name] <= 0:
+            raise ValueError(f"{name} must be greater than zero")
+    if inputs["holding_period"] not in HOLDING_DAYS:
+        raise ValueError("Unknown holding period")
+    if inputs["handling_unit"] not in HANDLING_UNIT_AREA_SQFT:
+        raise ValueError("Unknown handling unit")
+    if inputs["storage_system"] not in STORAGE_SYSTEMS:
+        raise ValueError("Unknown storage system")
+
+
 def calculate_feasibility(inputs: dict) -> FeasibilityResult:
     """Calculate space needs from normalized UI inputs."""
+    _validate_inputs(inputs)
     gross_area = inputs["length"] * inputs["width"]
     peak_volume = inputs["daily_volume"] * inputs["peak_factor"]
     inventory_units = peak_volume * HOLDING_DAYS[inputs["holding_period"]]
@@ -59,7 +84,14 @@ def calculate_feasibility(inputs: dict) -> FeasibilityResult:
     support_area = sum(
         area for name, area in SUPPORT_AREA_DEFAULTS.items() if name in inputs["selected_areas"]
     )
-    total = storage_area + aisle_area + dock_staging_area + processing_area + support_area
+    area_breakdown = {
+        "Storage": storage_area,
+        "Aisles": aisle_area,
+        "Dock staging": dock_staging_area,
+        "Processing": processing_area,
+        "Support areas": support_area,
+    }
+    total = sum(area_breakdown.values())
     utilization = total / gross_area * 100
     remaining = gross_area - total
     status = "Feasible" if utilization <= 85 else "Feasible but constrained" if utilization <= 100 else "Not feasible"
@@ -69,8 +101,7 @@ def calculate_feasibility(inputs: dict) -> FeasibilityResult:
         gross_area, peak_volume, positions, storage_area, aisle_area,
         dock_staging_area, processing_area, support_area, total,
         utilization, remaining, status, dock_capacity,
-        {"Storage": storage_area, "Aisles": aisle_area, "Dock staging": dock_staging_area,
-         "Processing": processing_area, "Support areas": support_area},
+        area_breakdown,
     )
 
 

@@ -32,6 +32,10 @@ Run the tests with:
 pytest
 ```
 
+The application opens at `http://localhost:8501` by default. Choose a scenario in
+the sidebar; Streamlit recalculates the feasibility result immediately whenever a
+control changes.
+
 ## Important limitations
 
 This is a **preliminary planning and feasibility tool**. Its assumptions are generic and must be validated for the specific operation. It is not a replacement for CAD design, detailed material-flow simulation, fire-code review, building-code review, structural engineering, safety validation, equipment-vendor design, or professional warehouse engineering. The conceptual layout is not operationally or legally approved.

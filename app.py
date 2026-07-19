@@ -3,7 +3,13 @@
 import pandas as pd
 import streamlit as st
 
-from assumptions import FACILITY_TYPES, PROCESSING_AREA_DEFAULTS, SUPPORT_AREA_DEFAULTS
+from assumptions import (
+    FACILITY_TYPES,
+    HANDLING_UNIT_AREA_SQFT,
+    PROCESSING_AREA_DEFAULTS,
+    STORAGE_SYSTEMS,
+    SUPPORT_AREA_DEFAULTS,
+)
 from calculations import calculate_feasibility, generate_recommendations
 from layout_generator import create_layout
 
@@ -39,11 +45,17 @@ result = calculate_feasibility(inputs)
 
 status_color = {"Feasible": "green", "Feasible but constrained": "orange", "Not feasible": "red"}[result.status]
 st.subheader("Feasibility result")
-st.markdown(f"### :{status_color}[{result.status}]")
+status_message = {
+    "Feasible": "The estimated requirements fit with at least 15% planning buffer.",
+    "Feasible but constrained": "The requirements fit, but less than 15% planning buffer remains.",
+    "Not feasible": "The estimated requirements exceed the available floor area.",
+}[result.status]
+st.markdown(f"### :{status_color}[{result.status}] — {status_message}")
 cols = st.columns(5)
 cols[0].metric("Gross warehouse area", f"{result.gross_area:,.0f} ft²")
 cols[1].metric("Total required area", f"{result.total_required_area:,.0f} ft²")
-cols[2].metric("Remaining / shortfall", f"{result.remaining_area:,.0f} ft²")
+balance_label = "Remaining area" if result.remaining_area >= 0 else "Area shortfall"
+cols[2].metric(balance_label, f"{abs(result.remaining_area):,.0f} ft²")
 cols[3].metric("Space utilization", f"{result.utilization:.1f}%")
 cols[4].metric("Storage positions", f"{result.storage_positions:,}")
 
@@ -64,6 +76,9 @@ with right:
     st.caption("Blocks are conceptual and proportional where possible; they are not engineered placements.")
 
 with st.expander("View selected area assumptions"):
+    st.write(f"Handling-unit base footprint: **{HANDLING_UNIT_AREA_SQFT[handling_unit]:,.1f} ft² per position**.")
+    system_assumption = STORAGE_SYSTEMS[storage_system]
+    st.write(f"{storage_system}: **{system_assumption['footprint_factor']:.0%} footprint factor** and **{system_assumption['base_aisle_ratio']:.0%} base aisle allowance** at a 10-foot aisle.")
     st.write("Dock staging: **500 ft² per selected dock**.")
     for name, value in {**PROCESSING_AREA_DEFAULTS, **SUPPORT_AREA_DEFAULTS}.items():
         if name in selected_areas:

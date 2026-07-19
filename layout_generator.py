@@ -9,7 +9,6 @@ COLORS = {"Docks": "#334155", "Dock staging": "#38bdf8", "Processing": "#f59e0b"
 
 def create_layout(length: float, width: float, breakdown: dict[str, float], docks: int) -> go.Figure:
     """Draw proportional conceptual zones while keeping every block inside the shell."""
-    gross = length * width
     support_width = min(width * 0.20, breakdown["Support areas"] / length) if length else 0
     main_width = width - support_width
     dock_depth = min(length * 0.06, 12)

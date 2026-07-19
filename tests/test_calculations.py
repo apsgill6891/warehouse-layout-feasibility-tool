@@ -40,3 +40,31 @@ def test_constrained_and_infeasible_thresholds():
     assert 85 < constrained.utilization <= 100
     assert infeasible.status == "Not feasible"
     assert infeasible.remaining_area < 0
+
+
+def test_same_day_uses_quarter_day_buffer_and_rounds_positions_up():
+    result = calculate_feasibility(base_inputs(
+        daily_volume=1_001, holding_period="Same day", quantity_per_position=100,
+    ))
+    assert result.storage_positions == 3
+    assert result.peak_daily_volume == 1_001
+
+
+def test_total_matches_breakdown():
+    result = calculate_feasibility(base_inputs(
+        selected_areas={"Dock staging", "Packing area", "Washrooms"},
+    ))
+    assert result.total_required_area == pytest.approx(sum(result.area_breakdown.values()))
+
+
+@pytest.mark.parametrize("field", ["length", "width", "quantity_per_position"])
+def test_non_positive_inputs_are_rejected(field):
+    with pytest.raises(ValueError, match=f"{field} must be greater than zero"):
+        calculate_feasibility(base_inputs(**{field: 0}))
+
+
+def test_missing_inputs_have_a_clear_error():
+    values = base_inputs()
+    del values["daily_volume"]
+    with pytest.raises(ValueError, match="Missing required inputs: daily_volume"):
+        calculate_feasibility(values)
